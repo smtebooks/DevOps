@@ -7,24 +7,40 @@ jobs:
     strategy:
       matrix:
         os:
-        - ubuntu-latest
-        - macos-latest
-        - windows-latest
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
         go_version:
-        - 1.16
-        - 1.17
-        - 1.18
+          - 1.16
+          - 1.17
+          - 1.18
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
         with:
-          go-version: "1.18"
-      - name: TestV1
+          go-version: ${{ matrix.go_version }}
+      - name: Build
+        env:
+          CGO_ENABLED: 0
         run: |
           go build -o myproject
-      - name: Integration Test
+      - name: Run Tests
         run: |
-          ./myproject & 
-          res= $(curl localhost:3000)
-          [[ $res == 'Hello, World']]
+          go test
+      - name: Integration Test
+        shell: bash
+        run: |
+          ./myproject &
+          sleep 2
+          res=$(curl localhost:3000)
+          [[ $res == 'Hello, World!' ]]
+
+  docker-build:
+    runs-on: ubuntu-20.04
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          docker build .
